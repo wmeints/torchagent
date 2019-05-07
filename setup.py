@@ -4,8 +4,11 @@ import sys
 from setuptools import setup, find_packages, Command
 from shutil import rmtree
 
+VERSION = '0.1.1'
+REQUIRES_PYTHON = '>=3.5.0'
+
 here = os.path.abspath(os.path.dirname(__file__))
-version = '0.1.0'
+
 
 class UploadCommand(Command):
     """Support setup.py upload."""
@@ -39,7 +42,7 @@ class UploadCommand(Command):
         os.system('twine upload dist/*')
 
         self.status('Pushing git tags…')
-        os.system('git tag v{0}'.format(version))
+        os.system('git tag v{0}'.format(VERSION))
         os.system('git push --tags')
 
         sys.exit()
@@ -49,15 +52,16 @@ with open('README.rst') as readme_file:
     long_description = readme_file.read()
 
 setup(
-    name='torch-rl',
-    version=version,
+    name='torchagent',
+    version=VERSION,
     description='Reinforcement learning extensions for PyTorch',
     author='Willem Meints',
     author_email='willem.meints@gmail.com',
-    url='https://github.com/wmeints/torch-rl',
-    license='Apache=2.0',
+    url='https://github.com/wmeints/torchagent',
+    license='Apache-2.0',
     long_description=long_description,
     long_description_content_type='text/x-rst',
+    python_requires=REQUIRES_PYTHON,
     packages=find_packages(),
     cmdclass={
         'upload': UploadCommand,
