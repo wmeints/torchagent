@@ -34,8 +34,8 @@ class DQNAgent:
             tau (float): Factor controlling the speed at which the target model is updated
         """
 
-        self.policy = policy if policy is not None else EpsilonGreedyPolicy()
-        self.test_policy = test_policy if test_policy is not None else GreedyPolicy()
+        self.policy = policy if policy is not None else EpsilonGreedyPolicy(num_actions)
+        self.test_policy = test_policy if test_policy is not None else GreedyPolicy(num_actions)
         self.memory = memory
         self.training = training
         self.batch_size = batch_size
@@ -106,32 +106,43 @@ class DQNAgent:
         reward_batch = torch.cat(batch.reward)
         next_state_batch = torch.cat(batch.next_state)
         terminated_batch = torch.tensor(
-            [1. if s == False else 0. for s in batch], device=device, dtype=torch.float)
+            [1. if s == False else 0. for s in batch.done], device=device, dtype=torch.float)
 
-        # Note: We're using a second policy network to stabalize the learning process.
+        # We're trying to minimize a loss that is defined as follows:
+        # loss = sum(sqr(reward + gamma * target_Q(next_state) - Q(state)))
+        #
+        # Please note that you can use the huber loss also, but it uses the same inputs:
+        # - Q(next_state, a) --> Q-values for the target state
+        # - Q(state, a) --> Q-values for the current state
+        #
+        # We're using a second network to calculate the Q-values for the target state.
+        # this stabalizes the training process so it becomes more predictable.
+        
         if not self.enable_dqn:
-            # In q learning we estimate the values of the actions that we previously took.
             target_q_values = self.target_model(next_state_batch)
-            q_batch = target_q_values.gather(1, action_batch)
+            target_q_values = target_q_values.gather(1, action_batch)
+            q_values = self.model(state_batch)
+            q_values = q_values.gather(1, action_batch)
         else:
             # In double-q learning we use the policy network to predict the actions instead of using the actually performed actions.
             # We then use these predicted actions to calculate the expected value of these actions.
-            q_values = self.model(next_state_batch)
+            q_values = self.target_model(state_batch)
             estimated_actions = q_values.max(1)[1]
 
             target_q_values = self.target_model(next_state_batch)
-            q_batch = target_q_values.gather(1, estimated_actions)
+            target_q_values = target_q_values.gather(1, estimated_actions)
 
         # Calculate the discounted award for the actions taken by the agent.
         # Then reset the reward for the actions that caused the episode to end.
-        discounted_reward = self.gamma * q_batch
+        discounted_reward = self.gamma * target_q_values
         discounted_reward = terminated_batch * discounted_reward
 
         # Calculate the expected reward using the discounted reward and the actual reward.
         targets = discounted_reward + reward_batch
+        targets = targets.detach()
 
         # Now calculate the loss for the policy that we're currently using.
-        loss_value = self.loss(q_batch, targets.unsqueeze(1))
+        loss_value = self.loss(q_values, targets.unsqueeze(1))
 
         # Finally, optimize the policy using the choosen optimizer.
         self.optimizer.zero_grad()

@@ -2,6 +2,9 @@ import numpy as np
 import torch
 import random
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 class Policy:
     """ 
     Inherit from this class to implement a new policy.
@@ -19,15 +22,18 @@ class Policy:
         """
         raise NotImplementedError()
 
+
 class GreedyPolicy(Policy):
     """
     The greedy policy doesn't use exploration at all, instead is chooses the best action based on the provided action-values.
     """
-    def __init__(self):
+
+    def __init__(self, num_actions):
         """
         Initializes a new instance of the greedy policy.
         """
         super(GreedyPolicy, self).__init__()
+        self.num_actions = num_actions
 
     def select_action(self, q_values):
         """
@@ -36,8 +42,8 @@ class GreedyPolicy(Policy):
         if len(q_values.size()) > 1:
             raise AssertionError("q_values has more than one dimension")
 
-        action_tensor = q_values.max(0)[1]
-        action_tensor = action_tensor.view(1,1)
+        action_tensor = q_values.max(len(q_values.size())-1)[1]
+        action_tensor = action_tensor.view(1, 1)
 
         return action_tensor
 
@@ -49,7 +55,7 @@ class EpsilonGreedyPolicy(Policy):
     while a low value means that we're going to stick to what works and exploit the existing paths more.
     """
 
-    def __init__(self, epsilon=0.1):
+    def __init__(self, num_actions, epsilon=0.1):
         """
         Initializes the epsilon-greedy policy
 
@@ -58,6 +64,7 @@ class EpsilonGreedyPolicy(Policy):
         """
         super(EpsilonGreedyPolicy, self).__init__()
         self.epsilon = epsilon
+        self.num_actions = num_actions
 
     def select_action(self, q_values):
         """
@@ -70,15 +77,12 @@ class EpsilonGreedyPolicy(Policy):
             The index of the selected action
         """
 
-        trailing_dim = len(q_values.size()) - 1
-
-        if np.random.uniform() < self.epsilon:    
-            num_actions = q_values.size(trailing_dim)
+        if np.random.uniform() < self.epsilon:
             selected_action = torch.tensor(
-                [[random.randrange(num_actions)]],
-                dtype=torch.long)
+                [[random.randrange(self.num_actions)]],
+                dtype=torch.long, device=device)
         else:
-            selected_action = q_values.max(trailing_dim)[1]
-            selected_action = selected_action.view(1,1)
+            selected_action = q_values.max(len(q_values.size())-1)[1]
+            selected_action = selected_action.view(1, 1)
 
         return selected_action

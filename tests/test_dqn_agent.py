@@ -39,18 +39,18 @@ def test_agent_predict(agent):
 
     assert result > -1
 
-def test_agent_train_double_q(double_agent):
-    for _ in range(0, 11):
+def test_agent_train_double_q(double_q_agent):
+    for _ in range(0, 64):
         state = torch.from_numpy(np.random.random((1,10)).astype(np.float32)).to(device)
         next_state = torch.from_numpy(np.random.random((1,10)).astype(np.float32)).to(device)
-        action = double_agent.act(state)
+        action = double_q_agent.act(state)
 
-        double_agent.record(state, action, next_state, 1, False)
+        double_q_agent.record(state, action, next_state, 1, False)
 
-    double_agent.train()
+    double_q_agent.train()
 
 def test_agent_train(agent):
-    for _ in range(0, 11):
+    for _ in range(0, 64):
         state = torch.from_numpy(np.random.random((1,10)).astype(np.float32)).to(device)
         next_state = torch.from_numpy(np.random.random((1,10)).astype(np.float32)).to(device)
         action = agent.act(state)
