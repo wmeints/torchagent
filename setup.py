@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages, Command
 from shutil import rmtree
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 REQUIRES_PYTHON = '>=3.5.0'
 
 here = os.path.abspath(os.path.dirname(__file__))
