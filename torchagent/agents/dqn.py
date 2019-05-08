@@ -15,7 +15,7 @@ class DQNAgent:
     def __init__(self, num_actions, model, loss, optimizer,
                  memory, policy=None, test_policy=None,
                  training=True, enable_dqn=False, batch_size=32,
-                 gamma=0.9, tau=1e-3):
+                 gamma=0.9, tau=1e-3, warmup_steps=0):
         """
         Initializes a new instance of a Deep Q-Learning agent.
 
@@ -32,6 +32,7 @@ class DQNAgent:
             batch_size (int): The number of samples to use for each cycle of training
             gamma (float): The discount factor for rewards the agent receives
             tau (float): Factor controlling the speed at which the target model is updated
+            warmup_steps (int): The number of warmup steps before starting to update the target network
         """
 
         self.policy = policy if policy is not None else EpsilonGreedyPolicy(num_actions)
@@ -48,6 +49,7 @@ class DQNAgent:
         self.optimizer = optimizer
         self.tau = tau
         self.step = 0
+        self.warmup_steps=0
 
     def record(self, state, action, next_state, reward, done):
         """
@@ -154,6 +156,9 @@ class DQNAgent:
         self.optimizer.step()
 
     def update_target_model_(self):
+        if self.step < self.warmup_steps:
+            return
+
         if self.tau < 1.:
             for target_param, param in zip(self.target_model.parameters(), self.model.parameters()):
                 target_param.data.copy_(
