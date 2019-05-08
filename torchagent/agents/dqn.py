@@ -79,9 +79,9 @@ class DQNAgent:
             action_tensor = self.model(observation)
 
         if self.training:
-            selected_action = self.policy.select_action(action_tensor)
+            selected_action = self.policy.select_action(action_tensor, step=self.step)
         else:
-            selected_action = self.test_policy.select_action(action_tensor)
+            selected_action = self.test_policy.select_action(action_tensor, step=self.step)
 
         return selected_action
 

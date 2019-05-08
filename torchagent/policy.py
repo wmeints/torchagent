@@ -35,7 +35,7 @@ class GreedyPolicy(Policy):
         super(GreedyPolicy, self).__init__()
         self.num_actions = num_actions
 
-    def select_action(self, q_values):
+    def select_action(self, q_values, **kwargs):
         """
         Selects an action by choosing the index of the action with the highest q-value.
         """
@@ -66,7 +66,7 @@ class EpsilonGreedyPolicy(Policy):
         self.epsilon = epsilon
         self.num_actions = num_actions
 
-    def select_action(self, q_values):
+    def select_action(self, q_values, **kwargs):
         """
         Selects an action from the provided action space
 
@@ -78,6 +78,32 @@ class EpsilonGreedyPolicy(Policy):
         """
 
         if np.random.uniform() < self.epsilon:
+            selected_action = torch.tensor(
+                [[random.randrange(self.num_actions)]],
+                dtype=torch.long, device=device)
+        else:
+            selected_action = q_values.max(len(q_values.size())-1)[1]
+            selected_action = selected_action.view(1, 1)
+
+        return selected_action
+
+
+class DecayingEpsilonGreedyPolicy(Policy):
+    def __init__(self, num_actions, epsilon, decay_steps, eps_min=0.05, eps_max=1.0):
+        super(DecayingEpsilonGreedyPolicy, self).__init__()
+
+        self.num_actions = num_actions
+        self.epsilon = epsilon
+        self.eps_max = eps_max
+        self.eps_min = eps_min
+        self.decay_steps = decay_steps
+
+    def select_action(self, q_values, **kwargs):
+        step = kwargs.get('step', 0)
+
+        current_eps = max(self.eps_min, self.eps_max - (self.eps_max-self.eps_min) * step / self.decay_steps)
+
+        if np.random.uniform() < current_eps:
             selected_action = torch.tensor(
                 [[random.randrange(self.num_actions)]],
                 dtype=torch.long, device=device)
