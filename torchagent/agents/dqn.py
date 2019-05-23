@@ -15,7 +15,7 @@ class DQNAgent:
     def __init__(self, num_actions, model, loss, optimizer,
                  memory, policy=None, test_policy=None,
                  training=True, enable_dqn=False, batch_size=32,
-                 gamma=0.9, tau=1e-3, warmup_steps=0):
+                 gamma=0.9, tau=1e-3, warmup_steps=0, update_steps=1):
         """
         Initializes a new instance of a Deep Q-Learning agent.
 
@@ -49,7 +49,8 @@ class DQNAgent:
         self.optimizer = optimizer
         self.tau = tau
         self.step = 0
-        self.warmup_steps=0
+        self.warmup_steps = 0
+        self.update_steps = 4
 
     def record(self, state, action, next_state, reward, done):
         """
@@ -103,6 +104,9 @@ class DQNAgent:
         self.update_target_model_()
 
     def train_model_(self, batch):
+        if self.step < self.warmup_steps or self.step % self.update_steps > 0:
+            return
+
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
@@ -121,14 +125,15 @@ class DQNAgent:
         # this stabalizes the training process so it becomes more predictable.
         
         if not self.enable_dqn:
-            target_q_values = self.target_model(next_state_batch)
-            target_q_values = target_q_values.gather(1, action_batch)
             q_values = self.model(state_batch)
             q_values = q_values.gather(1, action_batch)
+
+            target_q_values = self.target_model(next_state_batch)
+            target_q_values = target_q_values.gather(1, action_batch)
         else:
             # In double-q learning we use the policy network to predict the actions instead of using the actually performed actions.
             # We then use these predicted actions to calculate the expected value of these actions.
-            q_values = self.target_model(state_batch)
+            q_values = self.model(state_batch)
             estimated_actions = q_values.max(1)[1]
 
             target_q_values = self.target_model(next_state_batch)
